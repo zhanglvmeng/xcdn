@@ -1,0 +1,66 @@
+代码思路不错：
+xcdn :
+1、查看ns记录和mx记录，然后检测这里面有没有特定的CDN标识，如果有则认为有cdn.
+ pattern = re.compile(
+            r"(cloudflare)|(cdn)|(cloud)|(fast)|(incapsula)|(photon)|(cachefly)|(wppronto)|(softlayer)|(incapsula)|(jsdelivr)|(akamai)", re.I)
+        cloudflare_pattern = re.compile(r"cloudflare", re.I)
+        if re.search(pattern, result):
+            if re.search(cloudflare_pattern, result):
+                print("has_cdn=1 from ns,and cdn is cloudflare")
+                return {'has_cdn': 1, 'is_cloud_flare': 1}
+            else:
+                print("has_cdn=1 from ns")
+                return {'has_cdn': 1, 'is_cloud_flare': 0}
+
+2、也可以通过A记录的个数来判断是否有CDN。大于1 被认为有CDN.
+
+ result = get_string_from_command("dig a %s +short" % self.domain)
+            find_a_record_pattern = re.findall(r"((\d{1,3}\.){3}\d{1,3})", result)
+            if find_a_record_pattern:
+                ip_count = 0
+                for each in find_a_record_pattern:
+                    ip_count += 1
+                if ip_count > 1:
+                    has_cdn = 1
+                    return {'has_cdn': 1, 'is_cloud_flare': 0}
+
+3、尝试找phpinfo 里面的真实ip
+ def get_domain_actual_ip_from_phpinfo(self):
+        # 从phpinfo页面尝试获得真实ip
+        CLIOutput().good_print("现在尝试从domain:%s可能存在的phpinfo页面获取真实ip" % self.domain)
+        phpinfo_page_list = ["info.php", "phpinfo.php", "test.php", "l.php"]
+        for each in phpinfo_page_list:
+            url = self.http_or_https + "://" + self.domain + "/" + each
+            CLIOutput().good_print("现在访问%s" % url)
+            visit = get_request(url,'seleniumPhantomJS')
+            code = visit['code']
+            content = visit['content']
+            pattern = re.compile(r"remote_addr", re.I)
+            if code == 200 and re.search(pattern, content):
+                print(each)
+                actual_ip = re.search(r"REMOTE_ADDR[^\.\d]+([\d\.]{7,15})[^\.\d]+", content).group(1)
+                return actual_ip
+        # return 0代表没有通过phpinfo页面得到真实ip
+        return 0
+4、通过masscan这个工具 找主站ip的C段，然后根据默认端口，扫描可用的ip.然后发起请求，根据响应中的title，来判断主站跟同一C段的ip是否一致。
+ masscan_command = "masscan -p%d %s/24 > /tmp/masscan.out" % (scanPort,ip)
+        os.system(masscan_command)
+        with open("/tmp/masscan.out", "r+") as f:
+            strings = f.read()
+        #os.system("rm /tmp/masscan.out")
+        import re
+        allIP=re.findall(r"((\d{1,3}\.){3}\d{1,3})",strings)
+        ipList=[]
+        for each in allIP:
+            ipList.append(each[0])
+
+
+
+ hosts_changed_domain_title= get_request(self.http_or_https + "://%s" % self.domain,'seleniumPhantomJS')['title']
+        os.system("rm /etc/hosts && mv /etc/hosts.bak /etc/hosts")
+        #这里要用title判断,html判断不可以,title相同则认为相同
+        if self.domain_title== hosts_changed_domain_title:
+            print("是的！！！！！！！！！！！！")
+            return True
+
+            
